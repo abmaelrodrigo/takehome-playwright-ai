@@ -22,4 +22,21 @@ test.describe('US-3: Cart badge', () => {
     await inventoryPage.addToCartByName('Sauce Labs Bike Light');
     await inventoryPage.expectCartBadgeCount(2);
   });
+
+  test('TC-US3-04: removing the only item in the cart clears the badge', async ({ inventoryPage }) => {
+    await inventoryPage.addToCartByName('Sauce Labs Backpack');
+    await inventoryPage.expectCartBadgeCount(1);
+
+    await inventoryPage.removeFromCartByName('Sauce Labs Backpack');
+    await inventoryPage.expectCartBadgeAbsent();
+  });
+
+  test('TC-US3-05: removing one of two items decrements the badge to 1', async ({ inventoryPage }) => {
+    await inventoryPage.addToCartByName('Sauce Labs Backpack');
+    await inventoryPage.addToCartByName('Sauce Labs Bike Light');
+    await inventoryPage.expectCartBadgeCount(2);
+
+    await inventoryPage.removeFromCartByName('Sauce Labs Backpack');
+    await inventoryPage.expectCartBadgeCount(1);
+  });
 });

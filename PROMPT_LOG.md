@@ -76,6 +76,68 @@ benefit. Every assertion in this suite instead uses Playwright's **web-first ass
 the live DOM until the expectation is met or the timeout elapses. No `waitForTimeout` appears
 anywhere in `tests/`.
 
+## 2026-07-23: Ran `/playwright-test-generator` for US-6 (sorting)
+
+User prompt: (invoked `/playwright-test-generator` directly, no extra instructions).
+
+Automated TC-US6-01 through TC-US6-06 from `test-cases.md`: extended
+`tests/pages/InventoryPage.ts` with sort locators/methods (`sortBy`, `expectSortValue`,
+`getProductNames`, `getProductPrices`, `expectPricesAscending`/`Descending`), added a new thin
+`tests/pages/ProductDetailPage.ts` (back-button only), registered it in `tests/fixtures.ts`, and
+added `tests/sort.spec.ts`. Ran the new spec twice and the full 18-test suite once — all green,
+no regressions.
+
+### 4. Two more places the AI's own generated content was wrong (caught before writing code)
+
+Per this skill's step 2 ("verify before writing selectors"), the sort dropdown and product data
+were re-probed against the live app before implementation — and this caught two mistakes already
+sitting in `test-cases.md` from the earlier `/bdd-test-case-generator` run, not just selector
+guesses:
+
+**Wrong tie-price pairing.** TC-US6-05 named "Sauce Labs Bolt T-Shirt and Sauce Labs Onesie" as
+the two products tied at $15.99. Dumping the live name→price mapping showed Onesie is actually
+$7.99; the real tie is Bolt T-Shirt and "Test.allTheThings() T-Shirt (Red)":
+```
+Sauce Labs Bolt T-Shirt -> $15.99
+Sauce Labs Onesie -> $7.99
+Test.allTheThings() T-Shirt (Red) -> $15.99
+```
+**Fix:** corrected the product names in `test-cases.md` (TC-US6-05 and the US-6 assumptions
+block) before the test was ever written, so `tests/sort.spec.ts` was never at risk of encoding
+the wrong pairing.
+
+**Wrong sort-persistence assumption.** TC-US6-06 assumed the selected price sort order persists
+after opening a product detail page and navigating back. Reproducing that flow against the live
+app showed the opposite — the sort dropdown resets to `az` ("Name (A to Z)") on return:
+```
+sort value after selecting hilo: hilo
+sort value after navigating back: az
+prices after navigating back: [ '$29.99', '$9.99', '$15.99', '$49.99', '$7.99', '$15.99' ]
+```
+**Fix:** rewrote TC-US6-06 in `test-cases.md` to assert the real (reset) behavior instead of the
+assumed (persisted) one, and `tests/sort.spec.ts` (TC-US6-06) asserts the dropdown reads `az`
+after the round trip — not that the prior sort survives.
+
+Both throwaway probe scripts used to reproduce these were deleted after use, per the skill's own
+guardrail against leaving probe artifacts in the repo.
+
+## 2026-07-23: New US-3 test case — removing a product decrements the badge
+
+User prompt: "add a new test case for US-3 (manual and automated): removing a product decrements
+the badge count. Log it in the prompt_log.md"
+
+US-3's requirement is only worded around adding, so before writing the test case the removal
+path was verified against the live app rather than assumed: after "Add to cart" is clicked, the
+button is replaced by a "Remove" button at `[data-test="remove-<slug>"]`, and clicking it
+decrements the same `shopping-cart-badge` element (or removes it entirely at zero, consistent
+with the no-badge-at-empty-cart behavior already documented for TC-US3-01).
+
+Added two BDD cases to `test-cases.md` (TC-US3-04: removing the only item clears the badge;
+TC-US3-05: removing one of two items decrements the badge to 1) and automated both in
+`tests/cart.spec.ts`, adding `removeFromCartByName()` to `tests/pages/InventoryPage.ts`
+alongside the existing `addToCartByName()`. Ran `cart.spec.ts` twice and the full 20-test suite
+once — all green, no regressions.
+
 ## Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:
@@ -99,3 +161,51 @@ Documented in full in `test-cases.md`; summarized here:
 - "Implement the generated test cases in Playwright + TypeScript using a Page Object Model and
   only web-first assertions, no `waitForTimeout`."
 - "Run the suite twice against the live site and capture proof of a repeatable green run."
+- "Run the skill against US-6 — Sorting: Products can be sorted by price low-to-high and
+  high-to-low."
+- "Create a command/prompt that reads test-cases.md and generates the automated test cases based
+  on the '3. Playwright implementation' section of takehome-playwright-ai.md."
+
+## 2026-07-23: New skill — `playwright-test-generator`
+
+User prompt: create a command / prompt where it reads the test-cases.md and generates the automated test cases based on the ### 3. Playwright implementation from the file takehome-playwright-ai.md. Log this request on the prompt_log.md
+
+Added `.claude/skills/playwright-test-generator/SKILL.md`, a second reusable prompt artifact
+(alongside `bdd-test-case-generator`) that closes the loop between the BDD cases in
+`test-cases.md` and the automation deliverable in section 3 of `takehome-playwright-ai (1).md`
+(TypeScript + `@playwright/test`, Page Object Model, web-first assertions only, at least one
+negative/edge case, repeatable green runs).
+
+Unlike the BDD-case skill, this one is intentionally **not** app-agnostic — it's scoped to this
+repo's existing structure (`tests/pages/*.ts`, `tests/fixtures.ts`) and explicitly encodes the
+verification discipline this project has already relied on twice (see the `cart-badge` and "Zip
+code" incidents above): confirm real `data-test` attributes/copy/URLs against a live browser
+before writing any new selector or expected string, rather than trusting `test-cases.md` wording
+or prior training data. Not yet invoked against new cases (e.g. the US-6 sorting cases) — that's
+a separate run.
+
+## 2026-07-23: US-6 (sorting) test cases
+User prompt: after reunning the /bdd-test-case-generator, the new test cases were not commited to test-cases.md. Fix this point, and log on the PROMPT_LOG.md
+
+Ran `/bdd-test-case-generator` against US-6. The first pass produced generic,
+app-agnostic cases (correct per the skill's design, since the skill itself must not assume any
+app), but they were not written to `test-cases.md` — the skill's contract is to output the
+cases in chat, not to persist them, and nothing in that turn wrote to disk. The user caught this
+because the file in the editor hadn't changed.
+
+**Fix:** before appending to `test-cases.md`, re-verified the sort control against the live app
+rather than trusting the generic output as-is:
+```
+SELECT HTML: <select class="product_sort_container" data-test="product-sort-container">
+  <option value="az">Name (A to Z)</option><option value="za">Name (Z to A)</option>
+  <option value="lohi">Price (low to high)</option><option value="hilo">Price (high to low)</option>
+</select>
+DEFAULT PRICES: [ '$29.99', '$9.99', '$15.99', '$49.99', '$7.99', '$15.99' ]
+LOHI PRICES:    [ '$7.99', '$9.99', '$15.99', '$15.99', '$29.99', '$49.99' ]
+HILO PRICES:    [ '$49.99', '$29.99', '$15.99', '$15.99', '$9.99', '$7.99' ]
+```
+This confirmed the exact dropdown `data-test`, option values/labels, and — notably — that two
+products (Bolt T-Shirt, Onesie) genuinely tie at $15.99, turning the tie-handling case
+(TC-US6-05) from a hypothetical edge case into a verified one. Six SauceDemo-specific cases
+(TC-US6-01 through TC-US6-06) were then appended to `test-cases.md` under a new `### US-6`
+section, matching the existing style. The throwaway probe script was deleted after use.

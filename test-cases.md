@@ -86,12 +86,19 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
 #### Assumptions
 - No badge element is rendered while the cart is empty (rather than a badge showing "0") —
   verified against the live app. Test cases below treat "no badge" as the empty-cart baseline.
+- The requirement is worded around adding, but removing is the direct inverse of the same
+  behavior (the cart badge is a live item count) and was verified against the live app: the
+  "Remove" button on the products page (`[data-test="remove-<slug>"]`, replacing "Add to cart"
+  once an item is in the cart) decrements the same badge. TC-US3-04/05 below cover removal so the
+  badge-count behavior is tested in both directions, not just additively.
 
 | ID | Title | Priority | Type |
 |----|-------|----------|------|
 | TC-US3-01 | Cart badge is absent when the cart is empty | Low | positive |
 | TC-US3-02 | Adding one product shows a badge count of 1 | High | positive |
 | TC-US3-03 | Adding a second distinct product increments the badge to 2 | Medium | positive |
+| TC-US3-04 | Removing the only item in the cart clears the badge | High | positive |
+| TC-US3-05 | Removing one of two items decrements the badge to 1 | Medium | positive |
 
 ---
 
@@ -124,6 +131,26 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
   - **When** the user clicks "Add to cart" on a second, different product
   - **Then** the cart badge updates
 - **Expected Result:** The cart badge is visible and shows exactly "2".
+
+### TC-US3-04: Removing the only item in the cart clears the badge
+- **Priority:** High
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and has exactly 1 product (e.g. Sauce Labs Backpack) in the cart, badge shows "1".
+- **Steps (Given-When-Then):**
+  - **Given** the cart contains exactly 1 item and the "Remove" button is shown in place of "Add to cart" for that product
+  - **When** the user clicks "Remove" on that product
+  - **Then** the cart badge disappears
+- **Expected Result:** No numeric badge is shown on the cart icon (matching the empty-cart baseline from TC-US3-01).
+
+### TC-US3-05: Removing one of two items decrements the badge to 1
+- **Priority:** Medium
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and has 2 distinct products in the cart, badge shows "2".
+- **Steps (Given-When-Then):**
+  - **Given** the cart contains 2 items
+  - **When** the user clicks "Remove" on one of the two products
+  - **Then** the cart badge updates
+- **Expected Result:** The cart badge is visible and shows exactly "1".
 
 ---
 
@@ -212,3 +239,97 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
   - **When** the user clicks Finish
   - **Then** the order is completed and a confirmation message is shown
 - **Expected Result:** URL is `/checkout-complete.html`, header text is "Thank you for your order!" and is visible.
+
+---
+
+### US-6: Products can be sorted by price low-to-high and high-to-low.
+
+#### Assumptions
+- The sort control is the dropdown at `[data-test="product-sort-container"]`, with options
+  "Name (A to Z)" (`az`), "Name (Z to A)" (`za`), "Price (low to high)" (`lohi`), and
+  "Price (high to low)" (`hilo`) — verified against the live app. This is a fixed-option
+  dropdown, not free text, so there is no invalid-selection failure mode to test as a negative
+  case.
+- The catalog is a fixed set of 6 products with no pagination — verified against the live app —
+  relevant to checking no items are lost or duplicated when re-sorted.
+- Two products (Sauce Labs Bolt T-Shirt and Test.allTheThings() T-Shirt (Red)) tie at $15.99 —
+  verified against the live app — so tie-handling is tested as a real case, not a hypothetical
+  edge case.
+- The sort dropdown resets to its default value ("Name (A to Z)") on every fresh navigation to
+  the products page — verified against the live app by sorting, opening a product detail page,
+  and navigating back. Sort order does **not** persist across that round trip; TC-US6-06 below
+  was corrected to test the real (reset) behavior instead of the originally assumed
+  (persisted) behavior.
+
+| ID | Title | Priority | Type |
+|----|-------|----------|------|
+| TC-US6-01 | Sort products by price, low to high | High | positive |
+| TC-US6-02 | Sort products by price, high to low | High | positive |
+| TC-US6-03 | Sorting does not add, drop, or duplicate products | Medium | positive |
+| TC-US6-04 | Switching directly between the two price sort orders re-sorts correctly | Medium | positive |
+| TC-US6-05 | Products with equal prices retain a stable relative order after sorting | Low | positive |
+| TC-US6-06 | Sort order resets to default after navigating to a product detail page and back | Low | positive |
+
+---
+
+### TC-US6-01: Sort products by price, low to high
+- **Priority:** High
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and viewing the products page in its default order.
+- **Steps (Given-When-Then):**
+  - **Given** the products page is displayed with products in their default order
+  - **When** the user selects "Price (low to high)" from the sort dropdown
+  - **Then** the product list re-renders in ascending order of price
+- **Expected Result:** For every adjacent pair of products in the rendered list, the price of the earlier product is less than or equal to the price of the later product (e.g. `$7.99, $9.99, $15.99, $15.99, $29.99, $49.99`).
+
+### TC-US6-02: Sort products by price, high to low
+- **Priority:** High
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and viewing the products page in its default order.
+- **Steps (Given-When-Then):**
+  - **Given** the products page is displayed with products in their default order
+  - **When** the user selects "Price (high to low)" from the sort dropdown
+  - **Then** the product list re-renders in descending order of price
+- **Expected Result:** For every adjacent pair of products in the rendered list, the price of the earlier product is greater than or equal to the price of the later product (e.g. `$49.99, $29.99, $15.99, $15.99, $9.99, $7.99`).
+
+### TC-US6-03: Sorting does not add, drop, or duplicate products
+- **Priority:** Medium
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and viewing the products page.
+- **Steps (Given-When-Then):**
+  - **Given** the full set of product names visible on the page in default order is recorded
+  - **When** the user selects "Price (low to high)" from the sort dropdown
+  - **And** then selects "Price (high to low)"
+  - **Then** the set of product names visible after each sort matches the originally recorded set exactly
+- **Expected Result:** The count (6) and identity of products shown after sorting equals the count and identity of products shown before sorting, in both sort directions.
+
+### TC-US6-04: Switching directly between the two price sort orders re-sorts correctly
+- **Priority:** Medium
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and has "Price (low to high)" already applied on the products page.
+- **Steps (Given-When-Then):**
+  - **Given** the product list is currently sorted low to high by price
+  - **When** the user selects "Price (high to low)" from the sort dropdown without an intervening page reload
+  - **Then** the list immediately re-renders in descending price order
+- **Expected Result:** The list transitions directly from a valid ascending price order to a valid descending price order, with no stale or partially-sorted intermediate state visible to a subsequent assertion.
+
+### TC-US6-05: Products with equal prices retain a stable relative order after sorting
+- **Priority:** Low
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and viewing the products page; Sauce Labs Bolt T-Shirt and Test.allTheThings() T-Shirt (Red) both tie at $15.99.
+- **Steps (Given-When-Then):**
+  - **Given** two products (Bolt T-Shirt and Test.allTheThings() T-Shirt (Red)) share the identical price of $15.99
+  - **When** the user selects "Price (low to high)" from the sort dropdown
+  - **And** then re-selects "Price (low to high)" again
+  - **Then** the relative order of the two equally-priced products is the same in both results
+- **Expected Result:** Re-applying the same sort order to an unchanged product set produces an identical resulting order every time, including the relative order of the two $15.99 items.
+
+### TC-US6-06: Sort order resets to default after navigating to a product detail page and back
+- **Priority:** Low
+- **Type:** positive
+- **Precondition:** User is logged in as `standard_user` and has applied "Price (high to low)" on the products page.
+- **Steps (Given-When-Then):**
+  - **Given** the product list is sorted by price, high to low
+  - **When** the user opens a product's detail page and then navigates back to the products page
+  - **Then** the product list reverts to its default sort order
+- **Expected Result:** The sort dropdown shows "Name (A to Z)" and the product list matches the default name-ascending order after a round-trip navigation to the product detail page and back — the previously selected price sort is not retained.

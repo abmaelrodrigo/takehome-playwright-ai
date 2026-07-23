@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/abmaelsouza/takehome-playwright-ai/.claude/skills/playwright-test-generator)",
+      "Edit(/.claude/skills/playwright-test-generator/**)",
+      "Bash(gh auth *)",
+      "Bash(git --version)"
+    ],
+    "additionalDirectories": [
+      "/Users/abmaelsouza/takehome-playwright-ai/.claude/skills"
+    ]
+  }
+}

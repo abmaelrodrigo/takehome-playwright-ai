@@ -5,6 +5,7 @@ import { CartPage } from './pages/CartPage';
 import { CheckoutStepOnePage } from './pages/CheckoutStepOnePage';
 import { CheckoutStepTwoPage } from './pages/CheckoutStepTwoPage';
 import { CheckoutCompletePage } from './pages/CheckoutCompletePage';
+import { ProductDetailPage } from './pages/ProductDetailPage';
 
 type Pages = {
   loginPage: LoginPage;
@@ -13,6 +14,7 @@ type Pages = {
   checkoutStepOnePage: CheckoutStepOnePage;
   checkoutStepTwoPage: CheckoutStepTwoPage;
   checkoutCompletePage: CheckoutCompletePage;
+  productDetailPage: ProductDetailPage;
 };
 
 export const test = base.extend<Pages>({
@@ -22,6 +24,7 @@ export const test = base.extend<Pages>({
   checkoutStepOnePage: async ({ page }, use) => use(new CheckoutStepOnePage(page)),
   checkoutStepTwoPage: async ({ page }, use) => use(new CheckoutStepTwoPage(page)),
   checkoutCompletePage: async ({ page }, use) => use(new CheckoutCompletePage(page)),
+  productDetailPage: async ({ page }, use) => use(new ProductDetailPage(page)),
 });
 
 export { expect } from '@playwright/test';
