@@ -171,6 +171,35 @@ adjusted or dropped.
 - Ran `checkout.spec.ts` twice and the full 21-test suite once — `21 passed`, exit code 0, both
   times; TC-US4-05 shows as an expected failure in every run, not a flaky one.
 
+## 2026-07-23: Extra assertion in CheckoutStepTwoPage.expectLoaded
+
+User prompt: "for expectLoaded method add one more assertion: page title 'Checkout: Overview'
+should be visible. Log this request."
+
+Before adding the assertion, verified the real title element on the live
+`checkout-step-two.html` page rather than guessing a selector:
+```html
+<span class="title" data-test="title">Checkout: Overview</span>
+```
+Added a `pageTitle` locator (`[data-test="title"]`) to `tests/pages/CheckoutStepTwoPage.ts` and
+an `expect(this.pageTitle).toHaveText('Checkout: Overview')` assertion inside `expectLoaded()`.
+Ran `checkout.spec.ts` twice — 6 passed both times (exit code 0), no regressions.
+
+## 2026-07-23: Extra assertion in CheckoutCompletePage.expectOrderConfirmed
+
+User prompt: "for expectOrderConfirmed method add one more assertion: page title 'Checkout:
+Complete!' should be visible. Log this request."
+
+Verified the real title element on the live `checkout-complete.html` page before writing the
+selector:
+```html
+<span class="title" data-test="title">Checkout: Complete!</span>
+```
+Same `[data-test="title"]` pattern as the checkout-overview page. Added a `pageTitle` locator to
+`tests/pages/CheckoutCompletePage.ts` and an `expect(this.pageTitle).toHaveText('Checkout:
+Complete!')` assertion inside `expectOrderConfirmed()`. Ran `checkout.spec.ts` twice — 6 passed
+both times (exit code 0), no regressions.
+
 ## Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:

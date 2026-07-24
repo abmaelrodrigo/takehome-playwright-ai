@@ -12,7 +12,9 @@
       "Bash(ssh-keygen -t ed25519 -C \"abmaelrodrigo@github\" -f ~/.ssh/id_ed25519 -N \"\")",
       "Bash(ssh -T git@github.com -o StrictHostKeyChecking=accept-new)",
       "Bash(npx playwright *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(echo \"EXIT: $?\")",
+      "Read(//private/tmp/**)"
     ],
     "additionalDirectories": [
       "/Users/abmaelsouza/takehome-playwright-ai/.claude/skills"
