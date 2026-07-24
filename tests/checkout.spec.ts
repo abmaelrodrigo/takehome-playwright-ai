@@ -40,6 +40,20 @@ test.describe('US-4: Checkout validation', () => {
     await checkoutStepOnePage.continueToOverview();
     await checkoutStepTwoPage.expectLoaded();
   });
+
+  test('TC-US4-05: whitespace-only First Name should block checkout with an error (known app gap)', async ({
+    checkoutStepOnePage,
+  }) => {
+    // SauceDemo only checks for a literal empty string, not whitespace-only input — verified
+    // against the live app for all three fields. This test documents that gap against the
+    // requirement's intent rather than silently asserting the app's (non-conforming) behavior.
+    test.fail(true, 'Known app gap: SauceDemo does not treat whitespace-only input as missing');
+
+    await checkoutStepOnePage.expectLoaded();
+    await checkoutStepOnePage.fillInfo('   ', 'Doe', '12345');
+    await checkoutStepOnePage.continueToOverview();
+    await checkoutStepOnePage.expectError('First Name is required');
+  });
 });
 
 test.describe('US-5: Order completion', () => {

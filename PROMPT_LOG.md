@@ -138,6 +138,39 @@ TC-US3-05: removing one of two items decrements the badge to 1) and automated bo
 alongside the existing `addToCartByName()`. Ran `cart.spec.ts` twice and the full 20-test suite
 once — all green, no regressions.
 
+## 2026-07-23: New US-4 test case — whitespace-only input reveals a real app gap
+
+User prompt: "add a new test case for US-4 (manual and automated): using only white spaces in
+any of the fields should shown an error message. Log it in the prompt_log.md"
+
+Before writing this test, the requested expected behavior ("shows an error") was verified
+against the live app rather than assumed — and the app does **not** do that. Reproduced with an
+isolated browser context per case to avoid cross-run cart-state pollution:
+```
+whitespace First Name  -> url: .../checkout-step-two.html | error: (none)
+whitespace Last Name   -> url: .../checkout-step-two.html | error: (none)
+whitespace Postal Code -> url: .../checkout-step-two.html | error: (none)
+```
+SauceDemo's validation only checks for a literal empty string, not whitespace-only content, so
+checkout silently proceeds for all three fields. This is a genuine gap in the app itself (not an
+AI selector/copy mistake like the two earlier findings above), and shipping a test that just
+asserts the app's current (non-conforming) behavior would have hidden it.
+
+**Resolution (confirmed with the user):** documented as a known gap rather than silently
+adjusted or dropped.
+- `test-cases.md`: added TC-US4-05, written against the requirement's intent (whitespace-only
+  First Name *should* block checkout with a required-field error), with the verified real
+  behavior called out explicitly in both the US-4 assumptions block and the case's own Expected
+  Result.
+- `tests/checkout.spec.ts`: TC-US4-05 is automated using Playwright's `test.fail(true, reason)`,
+  which marks the test as an **expected failure** — it still exercises the real assertion
+  (`expectError('First Name is required')`), still fails that assertion against the live app, but
+  Playwright reports it as a passing "expected failure" (exit code 0) rather than a red build.
+  This keeps the take-home's "tests must pass repeatably" ground rule intact while keeping the
+  gap visible in the test output (shown with a red ✘ in the run list) instead of hidden.
+- Ran `checkout.spec.ts` twice and the full 21-test suite once — `21 passed`, exit code 0, both
+  times; TC-US4-05 shows as an expected failure in every run, not a flaky one.
+
 ## Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:

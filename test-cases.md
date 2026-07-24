@@ -161,6 +161,13 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
   (First Name → Last Name → Postal Code) — verified against the live app. "Missing any field"
   is tested as three independent cases (each with the *other* two fields filled in), not a
   combinatorial matrix, since the app's behavior is field-by-field, not aggregate.
+- "Missing" is read as "should also cover whitespace-only input," since a field containing only
+  spaces is not meaningfully filled in. This was verified against the live app for all three
+  fields (First Name, Last Name, Postal Code): **SauceDemo's own validation does not treat a
+  whitespace-only value as missing** — it only checks for a literal empty string, so checkout
+  proceeds to the overview step with no error in every case. TC-US4-05 below documents this as a
+  known validation gap in the app rather than silently asserting the (currently non-existent)
+  error, or silently dropping the case.
 
 | ID | Title | Priority | Type |
 |----|-------|----------|------|
@@ -168,6 +175,7 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
 | TC-US4-02 | Missing Last Name blocks checkout with an error | Medium | negative |
 | TC-US4-03 | Missing Zip/Postal Code blocks checkout with an error | Medium | negative |
 | TC-US4-04 | All required fields present proceeds to the overview step | High | positive |
+| TC-US4-05 | Whitespace-only First Name should block checkout with an error (known gap: app does not enforce this) | Medium | negative |
 
 ---
 
@@ -214,6 +222,22 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
   - **When** the user clicks Continue
   - **Then** the user advances to the checkout overview step
 - **Expected Result:** URL is `/checkout-step-two.html` and the order summary (payment/shipping/total) is visible.
+
+### TC-US4-05: Whitespace-only First Name should block checkout with an error (known gap: app does not enforce this)
+- **Priority:** Medium
+- **Type:** negative
+- **Precondition:** User is logged in, has 1 item in the cart, and is on the "Checkout: Your Information" step.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the checkout information step
+  - **And** enters only spaces (`"   "`) for First Name, and fills Last Name and Zip/Postal Code with valid values
+  - **When** the user clicks Continue
+  - **Then** per the requirement's intent, the user should stay on the checkout information step and see a required-field error
+- **Expected Result:** Error banner text contains "First Name is required"; URL stays on `/checkout-step-one.html`.
+  **Verified live-app behavior differs:** SauceDemo does not validate whitespace-only input —
+  checkout proceeds to `/checkout-step-two.html` with no error shown. Reproduced for all three
+  fields (First Name, Last Name, Postal Code), not just this one. This is automated as a known,
+  intentionally-failing case (see `tests/checkout.spec.ts` and `PROMPT_LOG.md`), not silently
+  adjusted to match the gap.
 
 ---
 
