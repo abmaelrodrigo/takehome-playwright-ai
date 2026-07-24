@@ -144,10 +144,16 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
 - "Specific blocked message" is interpreted as the literal SauceDemo copy: "Epic sadface:
   Sorry, this user has been locked out." This differs from the generic invalid-credentials
   message in US-1, which is the point of testing it separately.
+- The lockout message should only appear once credentials actually match a locked account —
+  verified against the live app that `locked_out_user` with an *incorrect* password gets the
+  same generic mismatch error as any other invalid login, not the lockout message. This is the
+  correct, secure behavior (it doesn't leak account-status/existence to someone who doesn't
+  have the right password), and TC-US2-02 below tests it explicitly rather than assuming it.
 
 | ID | Title | Priority | Type |
 |----|-------|----------|------|
 | TC-US2-01 | Locked-out user sees the lockout-specific error | High | negative |
+| TC-US2-02 | Locked-out user with an incorrect password sees the generic error, not the lockout message | Medium | negative |
 
 ---
 
@@ -161,6 +167,17 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
   - **When** the user clicks the Login button
   - **Then** login is rejected and the lockout-specific message is shown
 - **Expected Result:** Error banner text is exactly "Epic sadface: Sorry, this user has been locked out." and the user stays on `/` (never reaches `/inventory.html`).
+
+### TC-US2-02: Locked-out user with an incorrect password sees the generic error, not the lockout message
+- **Priority:** Medium
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** enters username `locked_out_user` and an incorrect password
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees the generic credential-mismatch error, not the lockout message
+- **Expected Result:** Error banner text is exactly "Epic sadface: Username and password do not match any user in this service"; URL stays on `/`.
 
 ---
 

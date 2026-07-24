@@ -321,6 +321,26 @@ engines against a real third-party site. Re-ran the full suite 4 more times afte
 (`npx playwright install chromium`), which would leave Mobile Safari failing on a fresh clone
 since it needs the WebKit binary — updated to `npx playwright install chromium webkit`.
 
+## 2026-07-24: New US-2 test case — locked-out user with a wrong password
+
+User prompt: "for the US-2 create a new test case: locked_out_user with an incorrect password
+shows the generic credential error, not the lockout message. Log this request."
+
+Verified against the live app before writing the assertion:
+```
+username: locked_out_user, password: wrong_password
+-> error: Epic sadface: Username and password do not match any user in this service
+```
+Confirms the hypothesis: SauceDemo checks credential match before checking lockout status, so an
+incorrect password on a locked account gets the same generic mismatch error as any other invalid
+login — it does not leak "this account exists and is locked" to someone who doesn't have the
+right password. This is the correct, secure behavior, tested explicitly rather than assumed.
+
+Added TC-US2-02 to `test-cases.md` (with an updated US-2 assumptions note) and automated it in
+`tests/login.spec.ts` under the `US-2: Locked-out user` describe block; no new selectors needed.
+Ran `login.spec.ts` twice across all three projects (33 passed both times) and the full 84-test
+suite once — all green, exit code 0, no regressions.
+
 ## Appendix: Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:

@@ -63,4 +63,13 @@ test.describe('US-2: Locked-out user', () => {
     await loginPage.expectError('Epic sadface: Sorry, this user has been locked out.');
     await expect(loginPage.page).toHaveURL('https://www.saucedemo.com/');
   });
+
+  test('TC-US2-02: locked-out user with an incorrect password sees the generic error, not the lockout message', async ({
+    loginPage,
+  }) => {
+    await loginPage.goto();
+    await loginPage.login(LOCKED_OUT_USER, 'wrong_password');
+    await loginPage.expectError('Username and password do not match any user in this service');
+    await expect(loginPage.page).toHaveURL('https://www.saucedemo.com/');
+  });
 });
