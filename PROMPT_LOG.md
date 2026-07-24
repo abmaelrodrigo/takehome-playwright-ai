@@ -4,7 +4,7 @@ This project was built with Claude Code (Claude Sonnet 5) in an interactive sess
 records what was asked, and — per the assignment — the concrete places the AI's first instinct
 was wrong or incomplete, how that was caught, and what was done about it.
 
-## Workflow
+## 2026-07-23: Initial workflow — US-1 through US-5
 
 1. Asked the AI to design a reusable, parameterized BDD test-case-generation prompt
    (`.claude/skills/bdd-test-case-generator/SKILL.md`), independent of any specific app.
@@ -19,13 +19,13 @@ was wrong or incomplete, how that was caught, and what was done about it.
    the live site to confirm a repeatable green run, and captured the HTML report as proof
    (`proof-of-green-run.png`, `playwright-report/`).
 
-## Two verified places the AI was wrong (with reproduction)
+### Two verified places the AI was wrong (with reproduction)
 
 These weren't hypothetical — each was reproduced as a real Playwright test run before being
 corrected. Throwaway probe specs used for reproduction were deleted afterward; the transcript
 below is the actual run output.
 
-### 1. Hallucinated `data-test` attribute name for the cart badge
+#### 1. Hallucinated `data-test` attribute name for the cart badge
 
 **What the AI assumed:** SauceDemo's `data-test` attributes generally follow a short, singular
 naming style (`add-to-cart-...`, `remove-...`), so a very plausible generated selector for the
@@ -48,7 +48,7 @@ Error: element(s) not found
 **Fix:** `tests/pages/InventoryPage.ts` uses the verified `[data-test="shopping-cart-badge"]`
 selector, confirmed against the live DOM dump before being written into the Page Object.
 
-### 2. Wrong assumed copy for the Zip/Postal Code validation error
+#### 2. Wrong assumed copy for the Zip/Postal Code validation error
 
 **What the AI assumed:** The requirement (US-4) is worded "Zip/Postal Code," so a first-pass
 assertion reasonably guessed the on-screen error would say "Zip code is required."
@@ -65,7 +65,7 @@ label is "Zip/Postal Code."
 **Fix:** `tests/checkout.spec.ts` (TC-US4-03) and `CheckoutStepOnePage.expectError` assert on
 the real string, "Postal Code is required."
 
-### 3. (Practice avoided, not just fixed) `waitForTimeout` as a synchronization strategy
+#### 3. (Practice avoided, not just fixed) `waitForTimeout` as a synchronization strategy
 
 Not a hard failure, but a standard failure mode worth naming: a common AI-generated first draft
 for "wait for the cart badge to update after clicking Add to Cart" reaches for
@@ -75,6 +75,54 @@ benefit. Every assertion in this suite instead uses Playwright's **web-first ass
 (`expect(locator).toHaveText(...)`, `toBeVisible()`, `toHaveURL(...)`), which auto-retry against
 the live DOM until the expectation is met or the timeout elapses. No `waitForTimeout` appears
 anywhere in `tests/`.
+
+## 2026-07-23: US-6 (sorting) test cases
+
+User prompt: "after reunning the /bdd-test-case-generator, the new test cases were not commited
+to test-cases.md. Fix this point, and log on the PROMPT_LOG.md"
+
+Ran `/bdd-test-case-generator` against US-6. The first pass produced generic,
+app-agnostic cases (correct per the skill's design, since the skill itself must not assume any
+app), but they were not written to `test-cases.md` — the skill's contract is to output the
+cases in chat, not to persist them, and nothing in that turn wrote to disk. The user caught this
+because the file in the editor hadn't changed.
+
+**Fix:** before appending to `test-cases.md`, re-verified the sort control against the live app
+rather than trusting the generic output as-is:
+```
+SELECT HTML: <select class="product_sort_container" data-test="product-sort-container">
+  <option value="az">Name (A to Z)</option><option value="za">Name (Z to A)</option>
+  <option value="lohi">Price (low to high)</option><option value="hilo">Price (high to low)</option>
+</select>
+DEFAULT PRICES: [ '$29.99', '$9.99', '$15.99', '$49.99', '$7.99', '$15.99' ]
+LOHI PRICES:    [ '$7.99', '$9.99', '$15.99', '$15.99', '$29.99', '$49.99' ]
+HILO PRICES:    [ '$49.99', '$29.99', '$15.99', '$15.99', '$9.99', '$7.99' ]
+```
+This confirmed the exact dropdown `data-test`, option values/labels, and — notably — that two
+products (Bolt T-Shirt, Onesie) genuinely tie at $15.99, turning the tie-handling case
+(TC-US6-05) from a hypothetical edge case into a verified one. Six SauceDemo-specific cases
+(TC-US6-01 through TC-US6-06) were then appended to `test-cases.md` under a new `### US-6`
+section, matching the existing style. The throwaway probe script was deleted after use.
+
+## 2026-07-23: New skill — `playwright-test-generator`
+
+User prompt: "create a command / prompt where it reads the test-cases.md and generates the
+automated test cases based on the ### 3. Playwright implementation from the file
+takehome-playwright-ai.md. Log this request on the prompt_log.md"
+
+Added `.claude/skills/playwright-test-generator/SKILL.md`, a second reusable prompt artifact
+(alongside `bdd-test-case-generator`) that closes the loop between the BDD cases in
+`test-cases.md` and the automation deliverable in section 3 of `takehome-playwright-ai (1).md`
+(TypeScript + `@playwright/test`, Page Object Model, web-first assertions only, at least one
+negative/edge case, repeatable green runs).
+
+Unlike the BDD-case skill, this one is intentionally **not** app-agnostic — it's scoped to this
+repo's existing structure (`tests/pages/*.ts`, `tests/fixtures.ts`) and explicitly encodes the
+verification discipline this project has already relied on twice (see the `cart-badge` and "Zip
+code" incidents above): confirm real `data-test` attributes/copy/URLs against a live browser
+before writing any new selector or expected string, rather than trusting `test-cases.md` wording
+or prior training data. Not yet invoked against new cases (e.g. the US-6 sorting cases) — that's
+a separate run.
 
 ## 2026-07-23: Ran `/playwright-test-generator` for US-6 (sorting)
 
@@ -87,7 +135,7 @@ Automated TC-US6-01 through TC-US6-06 from `test-cases.md`: extended
 added `tests/sort.spec.ts`. Ran the new spec twice and the full 18-test suite once — all green,
 no regressions.
 
-### 4. Two more places the AI's own generated content was wrong (caught before writing code)
+### Two more places the AI's own generated content was wrong (caught before writing code)
 
 Per this skill's step 2 ("verify before writing selectors"), the sort dropdown and product data
 were re-probed against the live app before implementation — and this caught two mistakes already
@@ -273,7 +321,7 @@ engines against a real third-party site. Re-ran the full suite 4 more times afte
 (`npx playwright install chromium`), which would leave Mobile Safari failing on a fresh clone
 since it needs the WebKit binary — updated to `npx playwright install chromium webkit`.
 
-## Assumptions surfaced by the AI during test-case generation
+## Appendix: Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:
 - US-1: "invalid credentials" is treated as wrong-password and empty-fields; `locked_out_user`
@@ -284,7 +332,7 @@ Documented in full in `test-cases.md`; summarized here:
   Postal Code order, so "missing any field" is tested as three independent single-field-missing
   cases rather than a combinatorial matrix.
 
-## Representative prompts used
+## Appendix: Representative prompts used
 
 - "Write a reusable, parameterized skill that turns any short/ambiguous requirement into
   Given-When-Then BDD test cases with title, precondition, steps, expected result, priority,
@@ -300,47 +348,3 @@ Documented in full in `test-cases.md`; summarized here:
   high-to-low."
 - "Create a command/prompt that reads test-cases.md and generates the automated test cases based
   on the '3. Playwright implementation' section of takehome-playwright-ai.md."
-
-## 2026-07-23: New skill — `playwright-test-generator`
-
-User prompt: create a command / prompt where it reads the test-cases.md and generates the automated test cases based on the ### 3. Playwright implementation from the file takehome-playwright-ai.md. Log this request on the prompt_log.md
-
-Added `.claude/skills/playwright-test-generator/SKILL.md`, a second reusable prompt artifact
-(alongside `bdd-test-case-generator`) that closes the loop between the BDD cases in
-`test-cases.md` and the automation deliverable in section 3 of `takehome-playwright-ai (1).md`
-(TypeScript + `@playwright/test`, Page Object Model, web-first assertions only, at least one
-negative/edge case, repeatable green runs).
-
-Unlike the BDD-case skill, this one is intentionally **not** app-agnostic — it's scoped to this
-repo's existing structure (`tests/pages/*.ts`, `tests/fixtures.ts`) and explicitly encodes the
-verification discipline this project has already relied on twice (see the `cart-badge` and "Zip
-code" incidents above): confirm real `data-test` attributes/copy/URLs against a live browser
-before writing any new selector or expected string, rather than trusting `test-cases.md` wording
-or prior training data. Not yet invoked against new cases (e.g. the US-6 sorting cases) — that's
-a separate run.
-
-## 2026-07-23: US-6 (sorting) test cases
-User prompt: after reunning the /bdd-test-case-generator, the new test cases were not commited to test-cases.md. Fix this point, and log on the PROMPT_LOG.md
-
-Ran `/bdd-test-case-generator` against US-6. The first pass produced generic,
-app-agnostic cases (correct per the skill's design, since the skill itself must not assume any
-app), but they were not written to `test-cases.md` — the skill's contract is to output the
-cases in chat, not to persist them, and nothing in that turn wrote to disk. The user caught this
-because the file in the editor hadn't changed.
-
-**Fix:** before appending to `test-cases.md`, re-verified the sort control against the live app
-rather than trusting the generic output as-is:
-```
-SELECT HTML: <select class="product_sort_container" data-test="product-sort-container">
-  <option value="az">Name (A to Z)</option><option value="za">Name (Z to A)</option>
-  <option value="lohi">Price (low to high)</option><option value="hilo">Price (high to low)</option>
-</select>
-DEFAULT PRICES: [ '$29.99', '$9.99', '$15.99', '$49.99', '$7.99', '$15.99' ]
-LOHI PRICES:    [ '$7.99', '$9.99', '$15.99', '$15.99', '$29.99', '$49.99' ]
-HILO PRICES:    [ '$49.99', '$29.99', '$15.99', '$15.99', '$9.99', '$7.99' ]
-```
-This confirmed the exact dropdown `data-test`, option values/labels, and — notably — that two
-products (Bolt T-Shirt, Onesie) genuinely tie at $15.99, turning the tie-handling case
-(TC-US6-05) from a hypothetical edge case into a verified one. Six SauceDemo-specific cases
-(TC-US6-01 through TC-US6-06) were then appended to `test-cases.md` under a new `### US-6`
-section, matching the existing style. The throwaway probe script was deleted after use.
