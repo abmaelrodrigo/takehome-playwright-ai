@@ -24,8 +24,9 @@ Requires Node.js 18+.
 
 ```bash
 npm install
-npx playwright install chromium
-npm test              # runs all 12 tests headless against the live saucedemo.com
+npx playwright install chromium webkit
+npm test              # runs the full suite headless against the live saucedemo.com,
+                       # across desktop Chromium, Mobile Chrome (Pixel 5), and Mobile Safari (iPhone 12)
 npm run test:headed   # same, with a visible browser
 npm run report        # opens the last HTML report
 ```

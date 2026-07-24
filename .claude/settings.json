@@ -17,7 +17,8 @@
       "Read(//private/tmp/**)"
     ],
     "additionalDirectories": [
-      "/Users/abmaelsouza/takehome-playwright-ai/.claude/skills"
+      "/Users/abmaelsouza/takehome-playwright-ai/.claude/skills",
+      "/tmp"
     ]
   }
 }

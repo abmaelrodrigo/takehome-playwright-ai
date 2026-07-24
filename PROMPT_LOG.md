@@ -233,6 +233,46 @@ Added TC-US1-04 through TC-US1-09 to `test-cases.md` and automated all six in
 Ran `login.spec.ts` twice and the full 27-test suite once — all green (exit code 0), no
 regressions.
 
+## 2026-07-24: Adapt all tests to run in mobile viewports
+
+User prompt: "Adapte all tests to also run in Mobile viewports. Log this request."
+
+Added two mobile projects to `playwright.config.ts` alongside the existing `chromium` project:
+`Mobile Chrome` (`devices['Pixel 5']`) and `Mobile Safari` (`devices['iPhone 12']`) — the latter
+runs on the WebKit engine, which was already installed locally (`webkit-2311`). No Page Object or
+spec changes were needed: SauceDemo's `data-test` attributes and DOM structure are identical
+across viewport sizes, only CSS layout changes, so the existing selectors worked unmodified.
+Verified each project standalone first (`--project="Mobile Chrome"`, `--project="Mobile
+Safari"`) — 27/27 passed on both before ever running them together.
+
+### A real (not hypothetical) flake found while verifying repeatability
+
+Running the full 81-test suite (27 cases × 3 projects) back-to-back caught one transient
+failure on the second of four runs:
+```
+[Mobile Safari] › tests/cart.spec.ts:26:7 › TC-US3-04: removing the only item in the cart clears the badge
+Error: expect(locator).toBeVisible() failed
+Locator: locator('[data-test="shopping-cart-badge"]')
+Timeout: 5000ms | Error: element(s) not found
+```
+Reproduction steps taken before concluding this was resource contention rather than a logic bug:
+running `cart.spec.ts` alone against Mobile Safari 5 times in a row passed every time, but
+running the full 3-project × 27-test matrix (5 workers, 3 browser engines, all hitting the live
+public site concurrently) reproduced the flake roughly 1 run in 4. That pattern — passes in
+isolation, occasionally times out only under full concurrent load — points to the default 5s
+web-first assertion timeout being too tight for a live external site under heavier local
+parallelism, not a selector or synchronization-strategy problem.
+
+**Fix:** added `expect: { timeout: 10_000 }` to `playwright.config.ts` — still a web-first,
+auto-retrying assertion (no `waitForTimeout`, no manual sleep, no retry-count increase masking a
+real bug), just a wider retry budget appropriate for concurrently exercising three browser
+engines against a real third-party site. Re-ran the full suite 4 more times after the change —
+`81 passed`, exit code 0, every time.
+
+**Also fixed:** `README.md`'s install command only installed Chromium
+(`npx playwright install chromium`), which would leave Mobile Safari failing on a fresh clone
+since it needs the WebKit binary — updated to `npx playwright install chromium webkit`.
+
 ## Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:
