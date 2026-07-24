@@ -200,6 +200,39 @@ Same `[data-test="title"]` pattern as the checkout-overview page. Added a `pageT
 Complete!')` assertion inside `expectOrderConfirmed()`. Ran `checkout.spec.ts` twice — 6 passed
 both times (exit code 0), no regressions.
 
+## 2026-07-23: New US-1 test cases — case sensitivity, blank fields, whitespace-only input
+
+User prompt: "Add case sensitive, blank and white spaces testes for US-1. Log this request."
+
+Before writing any of these, the real login behavior was reproduced (isolated browser context
+per case, to avoid session/cart state bleeding across cases):
+```
+uppercase-first username -> error: Username and password do not match any user in this service
+all-caps username        -> error: Username and password do not match any user in this service
+uppercase-first password -> error: Username and password do not match any user in this service
+all-caps password        -> error: Username and password do not match any user in this service
+blank username only      -> error: Username is required
+blank password only      -> error: Password is required
+whitespace-only username -> error: Username and password do not match any user in this service
+whitespace-only password -> error: Username and password do not match any user in this service
+```
+Two things this ruled out before they became wrong assumptions in `test-cases.md`:
+- Login is genuinely case-sensitive for both fields (no case-insensitive bypass) — confirms
+  correct behavior rather than assuming it.
+- Individually-blank fields surface a **different** message each ("Password is required" when
+  only password is blank) than the already-tested combined-blank case (TC-US1-03, which only
+  ever shows "Username is required" since username validates first) — a scenario the existing
+  suite didn't cover.
+- Whitespace-only input in login is correctly rejected as a non-matching credential (generic
+  error, not a "required" error) — unlike the checkout form, which silently accepts
+  whitespace-only input (see the US-4 finding above). Worth contrasting: same app, one form
+  validates correctly, the other doesn't.
+
+Added TC-US1-04 through TC-US1-09 to `test-cases.md` and automated all six in
+`tests/login.spec.ts` (added `STANDARD_USER` to the fixtures import; no new selectors needed).
+Ran `login.spec.ts` twice and the full 27-test suite once — all green (exit code 0), no
+regressions.
+
 ## Assumptions surfaced by the AI during test-case generation
 
 Documented in full in `test-cases.md`; summarized here:

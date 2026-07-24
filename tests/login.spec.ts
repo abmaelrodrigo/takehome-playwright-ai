@@ -1,4 +1,4 @@
-import { test, expect, loginAsStandardUser, LOCKED_OUT_USER, PASSWORD } from './fixtures';
+import { test, expect, loginAsStandardUser, STANDARD_USER, LOCKED_OUT_USER, PASSWORD } from './fixtures';
 
 test.describe('US-1: Login', () => {
   test('TC-US1-01: valid credentials reach the products page', async ({ loginPage, inventoryPage }) => {
@@ -17,6 +17,42 @@ test.describe('US-1: Login', () => {
     await loginPage.goto();
     await loginPage.login('', '');
     await loginPage.expectError('Username is required');
+  });
+
+  test('TC-US1-04: username with different casing is rejected', async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.login('Standard_User', PASSWORD);
+    await loginPage.expectError('Username and password do not match any user in this service');
+  });
+
+  test('TC-US1-05: password with different casing is rejected', async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.login(STANDARD_USER, 'Secret_Sauce');
+    await loginPage.expectError('Username and password do not match any user in this service');
+  });
+
+  test('TC-US1-06: blank username with a valid password shows a username-required error', async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.login('', PASSWORD);
+    await loginPage.expectError('Username is required');
+  });
+
+  test('TC-US1-07: blank password with a valid username shows a password-required error', async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.login(STANDARD_USER, '');
+    await loginPage.expectError('Password is required');
+  });
+
+  test('TC-US1-08: whitespace-only username is rejected as a non-matching credential', async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.login('   ', PASSWORD);
+    await loginPage.expectError('Username and password do not match any user in this service');
+  });
+
+  test('TC-US1-09: whitespace-only password is rejected as a non-matching credential', async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.login(STANDARD_USER, '   ');
+    await loginPage.expectError('Username and password do not match any user in this service');
   });
 });
 

@@ -11,12 +11,29 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
 - "Invalid credentials" covers both a wrong password for a known username and an empty
   submission. `locked_out_user` is deliberately excluded here — it has its own specific
   message and is covered by US-2, not treated as generic "invalid credentials".
+- "Blank" is tested both combined (TC-US1-03, both fields empty) and individually (TC-US1-06/07,
+  one field empty with the other valid) — verified against the live app that each combination
+  surfaces a distinct message: username is validated first ("Username is required" when it's
+  blank regardless of password), and only when username is present does a blank password surface
+  "Password is required".
+- Case sensitivity and whitespace-only input were verified against the live app rather than
+  assumed. Both username and password are genuinely case-sensitive (any case variation is
+  rejected). Whitespace-only input in either field is treated as a real, non-matching credential
+  value (generic mismatch error), **not** silently accepted — this is the correct, secure
+  behavior, and stands in useful contrast to the whitespace-only validation gap found on the
+  checkout form (see `test-cases.md` US-4 and `PROMPT_LOG.md`).
 
 | ID | Title | Priority | Type |
 |----|-------|----------|------|
 | TC-US1-01 | Valid credentials reach the products page | High | positive |
 | TC-US1-02 | Wrong password shows a generic error | High | negative |
 | TC-US1-03 | Empty username and password shows a required-fields error | Medium | negative |
+| TC-US1-04 | Username with different casing is rejected | Medium | negative |
+| TC-US1-05 | Password with different casing is rejected | Medium | negative |
+| TC-US1-06 | Blank username with a valid password shows a username-required error | Medium | negative |
+| TC-US1-07 | Blank password with a valid username shows a password-required error | Medium | negative |
+| TC-US1-08 | Whitespace-only username is rejected as a non-matching credential | Low | negative |
+| TC-US1-09 | Whitespace-only password is rejected as a non-matching credential | Low | negative |
 
 ---
 
@@ -52,6 +69,72 @@ Target app: https://www.saucedemo.com. Password for all users: `secret_sauce`.
   - **When** the user clicks the Login button
   - **Then** the user remains on the login page and sees an error message
 - **Expected Result:** An error banner is visible with text containing "Username is required"; URL stays on `/`.
+
+### TC-US1-04: Username with different casing is rejected
+- **Priority:** Medium
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** enters username `Standard_User` (correct letters, different casing) and the correct password `secret_sauce`
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees an error message
+- **Expected Result:** An error banner is visible with text containing "Username and password do not match any user in this service"; URL stays on `/`.
+
+### TC-US1-05: Password with different casing is rejected
+- **Priority:** Medium
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** enters the correct username `standard_user` and password `Secret_Sauce` (correct letters, different casing)
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees an error message
+- **Expected Result:** An error banner is visible with text containing "Username and password do not match any user in this service"; URL stays on `/`.
+
+### TC-US1-06: Blank username with a valid password shows a username-required error
+- **Priority:** Medium
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** leaves username blank but enters the correct password `secret_sauce`
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees an error message
+- **Expected Result:** An error banner is visible with text containing "Username is required"; URL stays on `/`.
+
+### TC-US1-07: Blank password with a valid username shows a password-required error
+- **Priority:** Medium
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** enters the correct username `standard_user` but leaves password blank
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees an error message
+- **Expected Result:** An error banner is visible with text containing "Password is required"; URL stays on `/`.
+
+### TC-US1-08: Whitespace-only username is rejected as a non-matching credential
+- **Priority:** Low
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** enters only spaces (`"   "`) for username and the correct password `secret_sauce`
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees an error message
+- **Expected Result:** An error banner is visible with text containing "Username and password do not match any user in this service" (not a "required" message); URL stays on `/`.
+
+### TC-US1-09: Whitespace-only password is rejected as a non-matching credential
+- **Priority:** Low
+- **Type:** negative
+- **Precondition:** User is on the SauceDemo login page and is not authenticated.
+- **Steps (Given-When-Then):**
+  - **Given** the user is on the login page
+  - **And** enters the correct username `standard_user` and only spaces (`"   "`) for password
+  - **When** the user clicks the Login button
+  - **Then** the user remains on the login page and sees an error message
+- **Expected Result:** An error banner is visible with text containing "Username and password do not match any user in this service" (not a "required" message); URL stays on `/`.
 
 ---
 
